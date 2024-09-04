@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game jelek</title>
+    <style>
+        canvas {
+            background-color: #0091ff;
+            display: block;
+            margin: 0 auto;
+        }
+        #gameOver {
+            display: none;
+            text-align: center;
+            font-size: 24px;
+            color: red;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+        }
+        #restartButton {
+            display: block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 18px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #controls {
+            position: absolute;
+            bottom: 10px;
+            width: 100%;
+            text-align: center;
+        }
+        .control-button {
+            display: inline-block;
+            margin: 0 10px;
+            padding: 15px 20px;
+            font-size: 24px; /* Increased font size for better touch support */
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #leftButton {
+            transform: scale(1.5); /* Enlarge button for mobile */
+        }
+        #rightButton {
+            transform: scale(1.5); /* Enlarge button for mobile */
+        }
+        #jumpButton {
+            transform: scale(1.5); /* Enlarge button for mobile */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div id="gameOver">
+        Kamu Mati! Mulai Ulang?
+        <button id="restartButton">Ulang</button>
+    </div>
+    <div id="controls">
+        <button class="control-button" id="leftButton">←</button>
+        <button class="control-button" id="jumpButton">⤒</button>
+        <button class="control-button" id="rightButton">→</button>
+    </div>
+    <script>
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const gameOverScreen = document.getElementById('gameOver');
+const restartButton = document.getElementById('restartButton');
+const jumpButton = document.getElementById('jumpButton');
+const leftButton = document.getElementById('leftButton');
+const rightButton = document.getElementById('rightButton');
+canvas.width = 1200; // Width for landscape
+canvas.height = 600; // Height for landscape
+
+let player, obstacles, gameSpeed, score, gameRunning, lastObstacleX, obstacleCount;
+let cameraOffsetX = 0;
+let isRunningRight = false;
+let isRunningLeft = false;
+let playerImage = new Image();
+playerImage.src = 'orang.png'; // Ganti dengan path ke PNG karakter Anda
+let groundImage = new Image();
+groundImage.src = 'tanah.jpeg'; // Ganti dengan gambar tanah
+let sunImage = new Image();
+sunImage.src = 'matahari.png'; // Ganti dengan gambar matahari
+let cloudImage = new Image();
+cloudImage.src = 'awan.png'; // Ganti dengan gambar awan
+let skyImage = new Image();
+skyImage.src = 'langit.jpg'; // Ganti dengan gambar langit
+
+function resetGame() {
+    player = {
+        x: 100,
+        y: canvas.height - 50,
+        width: 50,
+        height: 50,
+        speed: 5,
+        dy: 0,
+        gravity: 0.5,
+        jumpPower: -10,
+        isJumping: false,
+    };
+    obstacles = [];
+    gameSpeed = 3;
+    score = 0;
+    lastObstacleX = player.x;
+    cameraOffsetX = 0;
+    gameRunning = true;
+    obstacleCount = 0;
+    isRunningRight = false;
+    isRunningLeft = false;
+    gameOverScreen.style.display = 'none';
+    gameLoop();
+}
+
+function drawBackground() {
+    // Gambar langit
+    ctx.drawImage(skyImage, -cameraOffsetX, 0, canvas.width, canvas.height);
+
+    // Gambar tanah
+    ctx.drawImage(groundImage, -cameraOffsetX % canvas.width, canvas.height - 20, canvas.width, 20);
+    ctx.drawImage(groundImage, -cameraOffsetX % canvas.width + canvas.width, canvas.height - 20, canvas.width, 20);
+
+    // Gambar matahari
+    ctx.drawImage(sunImage, 50 - cameraOffsetX * 0.2, 50, 100, 100);
+
+    // Gambar awan bergerak
+    ctx.drawImage(cloudImage, 200 - cameraOffsetX * 0.5, 100, 100, 50);
+    ctx.drawImage(cloudImage, 400 - cameraOffsetX * 0.5, 150, 100, 50);
+    ctx.drawImage(cloudImage, 600 - cameraOffsetX * 0.5, 80, 100, 50);
+}
+
+function drawPlayer() {
+    ctx.drawImage(playerImage, player.x - cameraOffsetX, player.y, player.width, player.height);
+}
+
+function createObstacle() {
+    let obstacle = {};
+    let type = Math.random();
+    
+    if (type < 0.3) { // Batu jatuh dari atas
+        obstacle = {
+            x: player.x + Math.random() * canvas.width,
+            y: -50,
+            width: 30,
+            height: 30,
+            color: 'brown',
+            type: 'fallingRock',
+            direction: 'down',
+        };
+    } else if (type < 0.5) { // Batu muncul dari bawah
+        obstacle = {
+            x: player.x + Math.random() * canvas.width,
+            y: canvas.height + 50,
+            width: 30,
+            height: 30,
+            color: 'brown',
+            type: 'fallingRock',
+            direction: 'up',
+        };
+    } else if (type < 0.7) { // Tanah muncul dari bawah dan menghilang setelah 2 detik
+        obstacle = {
+            x: player.x + Math.random() * canvas.width,
+            y: canvas.height - 50,
+            width: 50,
+            height: 50,
+            color: 'green',
+            type: 'risingGround',
+            startTime: Date.now(),
+            duration: 2000, // 2 detik
+        };
+    } else { // Rintangan besi tajam (spike)
+        obstacle = {
+            x: player.x + canvas.width,
+            y: canvas.height - 50,
+            width: 30,
+            height: 50,
+            color: 'gray',
+            type: 'spike',
+        };
+    }
+    obstacles.push(obstacle);
+    obstacleCount++;
+}
+
+function updateObstacles() {
+    for (let i = 0; i < obstacles.length; i++) {
+        let obs = obstacles[i];
+        if (obs.type === 'fallingRock') {
+            switch (obs.direction) {
+                case 'down':
+                    obs.y += gameSpeed;
+                    break;
+                case 'up':
+                    obs.y -= gameSpeed;
+                    break;
+            }
+            ctx.fillStyle = obs.color;
+            ctx.fillRect(obs.x - cameraOffsetX, obs.y, obs.width, obs.height);
+
+            // Check for collision with player
+            if (player.x < obs.x + obs.width &&
+                player.x + player.width > obs.x &&
+                player.y < obs.y + obs.height &&
+                player.y + player.height > obs.y) {
+                gameRunning = false;
+                gameOverScreen.style.display = 'block';
+            }
+        } else if (obs.type === 'risingGround') {
+            if (Date.now() - obs.startTime < obs.duration) {
+                ctx.fillStyle = obs.color;
+                ctx.fillRect(obs
+                .x - cameraOffsetX, obs.y, obs.width, obs.height);
+            } else {
+                obstacles.splice(i, 1);
+                i--;
+            }
+        } else if (obs.type === 'spike') {
+            ctx.fillStyle = obs.color;
+            ctx.beginPath();
+            ctx.moveTo(obs.x - cameraOffsetX, obs.y + obs.height);
+            ctx.lineTo(obs.x + obs.width / 2 - cameraOffsetX, obs.y);
+            ctx.lineTo(obs.x + obs.width - cameraOffsetX, obs.y + obs.height);
+            ctx.closePath();
+            ctx.fill();
+
+            // Check for collision with player
+            if (player.x < obs.x + obs.width &&
+                player.x + player.width > obs.x &&
+                player.y + player.height > obs.y) {
+                gameRunning = false;
+                gameOverScreen.style.display = 'block';
+            }
+        }
+    }
+}
+
+function updatePlayer() {
+    if (player.isJumping) {
+        player.dy += player.gravity;
+        player.y += player.dy;
+
+        if (player.y + player.height >= canvas.height - 20) {
+            player.y = canvas.height - player.height - 20;
+            player.isJumping = false;
+            player.dy = 0;
+        }
+    }
+
+    if (isRunningRight) {
+        player.x += player.speed;
+        cameraOffsetX += player.speed; // Move camera to the right
+    } else if (isRunningLeft) {
+        player.x -= player.speed;
+        cameraOffsetX -= player.speed; // Move camera to the left
+    }
+}
+
+function gameLoop() {
+    if (gameRunning) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBackground();
+        drawPlayer();
+        updateObstacles();
+        updatePlayer();
+
+        if (player.x - lastObstacleX >= 80 || obstacleCount >= 32) {
+            createObstacle();
+            lastObstacleX = player.x;
+        }
+
+        if (obstacleCount >= 32) {
+            alert("Selamat! Kamu telah melewati 32 rintangan!");
+            resetGame();
+        }
+
+        requestAnimationFrame(gameLoop);
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.code === 'Space' && !player.isJumping && gameRunning) {
+        player.isJumping = true;
+        player.dy = player.jumpPower;
+    }
+    if (e.code === 'ArrowRight' && gameRunning) {
+        isRunningRight = true;
+    }
+    if (e.code === 'ArrowLeft' && gameRunning) {
+        isRunningLeft = true;
+    }
+});
+
+document.addEventListener('keyup', function(e) {
+    if (e.code === 'ArrowRight') {
+        isRunningRight = false;
+    }
+    if (e.code === 'ArrowLeft') {
+        isRunningLeft = false;
+    }
+});
+
+jumpButton.addEventListener('click', function() {
+    if (!player.isJumping && gameRunning) {
+        player.isJumping = true;
+        player.dy = player.jumpPower;
+    }
+});
+
+rightButton.addEventListener('touchstart', function() {
+    if (gameRunning) {
+        isRunningRight = true;
+    }
+});
+
+rightButton.addEventListener('touchend', function() {
+    isRunningRight = false;
+});
+
+leftButton.addEventListener('touchstart', function() {
+    if (gameRunning) {
+        isRunningLeft = true;
+    }
+});
+
+leftButton.addEventListener('touchend', function() {
+    isRunningLeft = false;
+});
+
+restartButton.addEventListener('click', function() {
+    resetGame();
+});
+
+resetGame();
+
+    </script>
+</body>
+</html>

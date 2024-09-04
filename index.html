@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Michael</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Montserrat', sans-serif;
+            overflow: hidden;
+        }
+
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            z-index: -1;
+        }
+
+        .container {
+            text-align: center;
+            color: white;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);
+            z-index: 1;
+        }
+
+        .container h1 {
+            font-size: 50px;
+            margin-bottom: 20px;
+        }
+
+        .start-btn {
+            padding: 15px 30px;
+            font-size: 24px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .start-btn:hover {
+            background-color: #218838;
+        }
+
+        .fade-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            z-index: 2;
+            opacity: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .fade-overlay.fade-in {
+            display: flex;
+            animation: fadeIn 3s forwards;
+        }
+
+        .fade-overlay.fade-out {
+            animation: fadeOut 3s forwards;
+        }
+
+        @keyframes fadeIn {
+            0% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <iframe src="https://michaelnujones.github.io/bc_bambu/bs.html"></iframe>
+
+    <div class="container">
+        <h1>Selamat Datang di Game Michael</h1>
+        <button class="start-btn" onclick="startGame()">Start</button>
+    </div>
+
+    <div class="fade-overlay" id="fadeOverlay">
+        Jika Anda memenangkan game ini, maka Anda akan diberi hadiah oleh Michael!
+    </div>
+
+    <script>
+        function startGame() {
+            const overlay = document.getElementById('fadeOverlay');
+            overlay.classList.add('fade-in');
+            setTimeout(() => {
+                overlay.classList.remove('fade-in');
+                overlay.classList.add('fade-out');
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    // Ganti dengan logika untuk memulai game atau mengarahkan ke halaman lain
+                    alert("Permainan Dimulai!");
+                    window.location.href = 'game.html'; // Ubah ini ke halaman game Anda
+                }, 3000); // Menunggu animasi fade-out selesai
+            }, 3000); // Durasi tampilan pesan sebelum memudar
+        }
+    </script>
+</body>
+</html>
